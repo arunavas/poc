@@ -3,22 +3,24 @@ package poc.frameworks.controller
 import net.liftweb.json.{Extraction, JsonParser, compactRender}
 import org.http4s._
 import org.http4s.dsl._
-import poc.frameworks.dao.Dao
-import poc.frameworks.model.external.{LoginRequest, ServiceResponse}
-import poc.frameworks.model.internal.User
-import poc.frameworks.service.Service.{login, register}
-import poc.frameworks.util.{JsonFormat, ApplicationUtil}
+import poc.frameworks.dao.{MockUserDao, UserDao}
+import poc.frameworks.model.external.{LoginRequest, ServiceResponse, User}
+import poc.frameworks.service.UserService
+import poc.frameworks.util.JsonFormat
+import poc.frameworks.validation.userValidation
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scalaz.{Kleisli, Reader}
 
 /**
   * Created by arunavas on 28/9/17.
   */
-object RestEndpoint {
+trait RestEndpoint {
+  userDao: UserDao =>
   implicit val formats = JsonFormat.formats
-  lazy val dao: Dao[User] = new ApplicationUtil[User]().getDao
-  lazy val registerUser = register(dao)
-  lazy val loginUser = login(dao)
+
+  private def userExecutor[A](reader: Reader[UserDao, A]): A = reader(userDao)
 
   val restService = HttpService {
     case req @ POST -> Root / "sample" / "register" =>
@@ -27,11 +29,15 @@ object RestEndpoint {
         request => {
           println(s"Received $request")
           val user = JsonParser.parse(request).extract[User]
-          val response = registerUser(user) map {
-            case Left(e) => ServiceResponse("FAILURE", "1", e, None)
-            case Right(d) => ServiceResponse("SUCCESS", "0", "SUCCESS", None)
-          } map (r => compactRender(Extraction.decompose(r)))
-          Ok(response)
+          val response = userValidation(user) match {
+            case e @ h :: t => Future(ServiceResponse("FAILURE", "1", e.mkString("\n"), null))
+            case Nil => userExecutor(UserService.checkIfNewUser(user.userName, user.mobile)
+              .map(_.flatMap(if (_) userExecutor(UserService.register(user)) else Future(Left("User already exists!"))))) map {
+              case Left(e) => ServiceResponse("FAILURE", "1", e, null)
+              case Right(d) => ServiceResponse("SUCCESS", "0", "SUCCESS", null)
+            }
+          }
+          Ok(response map (r => compactRender(Extraction.decompose(r))))
         }
       }
 
@@ -41,9 +47,9 @@ object RestEndpoint {
         request => {
           println(s"Received $request")
           val login = JsonParser.parse(request).extract[LoginRequest]
-          val response = loginUser(login.un, login.pwd) map {
-            case Left(e) => ServiceResponse("FAILURE", "1", e, None)
-            case Right(d) => ServiceResponse("SUCCESS", "0", "SUCCESS", None)
+          val response = userExecutor(UserService.login(login.un, login.pwd)) map {
+            case Left(e) => ServiceResponse("FAILURE", "1", e, null)
+            case Right(d) => ServiceResponse("SUCCESS", "0", "SUCCESS", null)
           } map (r => compactRender(Extraction.decompose(r)))
           Ok(response)
         }
@@ -51,3 +57,5 @@ object RestEndpoint {
   }
 
 }
+
+object RestEndpoint extends RestEndpoint with MockUserDao

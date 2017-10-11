@@ -8,7 +8,7 @@ import poc.frameworks.model.internal.{User => IUser}
   */
 package object model {
 
-  implicit def externalToInternalUser(u: EUser): IUser = IUser(None, u.name, u.mobile, u.address, u.userName, u.password)
+  implicit def externalToInternalUser(u: EUser): IUser = IUser(null, u.name, u.mobile, u.address, u.userName, u.password)
   implicit def internalToExternalUser(u: IUser): EUser = EUser(u.name, u.mobile, u.address, u.userName, u.password)
 
 }
