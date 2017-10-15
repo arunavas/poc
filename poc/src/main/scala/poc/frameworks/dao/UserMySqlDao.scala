@@ -6,7 +6,7 @@ import scala.concurrent.Future
 /**
   * Created by arunavas on 3/10/17.
   */
-class UserMySqlDao extends UserDao {
+trait UserMySqlDao extends UserDao {
 
   /*
   Will implement using mysql connection object later.

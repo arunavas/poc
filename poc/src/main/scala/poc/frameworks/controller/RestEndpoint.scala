@@ -22,6 +22,10 @@ trait RestEndpoint {
 
   private def userExecutor[A](reader: Reader[UserDao, A]): A = reader(userDao)
 
+  private def uniqueUserCheck: (User) => Future[Boolean] = UserService.checkIfNewUser andThen userExecutor
+  private def userRegistration: (User) => Future[Either[String, String]] = UserService.register andThen userExecutor
+  private def userLogin: (LoginRequest) => Future[Either[String, User]] = UserService.login andThen userExecutor
+
   val restService = HttpService {
     case req @ POST -> Root / "sample" / "register" =>
       println(s"ReqPath-POST: ${req.uri.path} from ${req.remoteUser}@${req.remoteAddr}")
@@ -31,8 +35,7 @@ trait RestEndpoint {
           val user = JsonParser.parse(request).extract[User]
           val response = userValidation(user) match {
             case e @ h :: t => Future(ServiceResponse("FAILURE", "1", e.mkString("\n"), null))
-            case Nil => userExecutor(UserService.checkIfNewUser(user.userName, user.mobile)
-              .map(_.flatMap(if (_) userExecutor(UserService.register(user)) else Future(Left("User already exists!"))))) map {
+            case Nil => uniqueUserCheck(user).flatMap(if (_) userRegistration(user) else Future(Left("User already exists!"))) map {
               case Left(e) => ServiceResponse("FAILURE", "1", e, null)
               case Right(d) => ServiceResponse("SUCCESS", "0", "SUCCESS", null)
             }
@@ -47,9 +50,9 @@ trait RestEndpoint {
         request => {
           println(s"Received $request")
           val login = JsonParser.parse(request).extract[LoginRequest]
-          val response = userExecutor(UserService.login(login.un, login.pwd)) map {
+          val response = userLogin(login) map {
             case Left(e) => ServiceResponse("FAILURE", "1", e, null)
-            case Right(d) => ServiceResponse("SUCCESS", "0", "SUCCESS", null)
+            case Right(d) => ServiceResponse("SUCCESS", "0", "SUCCESS", d)
           } map (r => compactRender(Extraction.decompose(r)))
           Ok(response)
         }

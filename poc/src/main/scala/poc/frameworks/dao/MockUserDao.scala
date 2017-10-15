@@ -21,7 +21,7 @@ trait MockUserDao extends UserDao {
 
   override def read(f: User => Boolean): Future[Option[User]] = Future(store find f)
 
-  override def readAll(f: User => Boolean): Future[List[User]] = Future(store.toList)
+  override def readAll(f: User => Boolean): Future[List[User]] = Future(store filter f toList)
 
   override def update(data: User)(f: User => Boolean): Future[Boolean] = {
     val idx = store indexWhere f

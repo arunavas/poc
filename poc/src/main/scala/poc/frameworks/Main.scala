@@ -2,7 +2,7 @@ package poc.frameworks
 
 import org.http4s.server.blaze.BlazeBuilder
 import org.http4s.server.middleware.{CORS, CORSConfig}
-import poc.frameworks.controller.RestEndpoint
+import poc.frameworks.controller.{RestEndpoint, TestRestEndpoint}
 
 import scala.concurrent.duration._
 
@@ -22,7 +22,7 @@ object Main extends App {
     None))
 
   val server = BlazeBuilder.bindHttp(Integer.valueOf(System.getProperty("server.port", "8080")), "0.0.0.0")
-    .mountService(corsEnabledService)
+    .mountService(corsEnabledService).mountService(TestRestEndpoint.restService)
     .run
   println(s"Service started and running at ${server.address.toString}")
   server.awaitShutdown()
