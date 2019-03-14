@@ -5,6 +5,6 @@ import java.util.function.Function;
 public interface Monad<M> {
 
 	<A> M unit(A m);
-	<N> Monad<N> bind(Function<M, N> f);
+	<A> M bind(Function<A, M> f);
 	
 }

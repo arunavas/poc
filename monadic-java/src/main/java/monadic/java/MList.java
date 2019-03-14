@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class MList<A> implements Monad<MList<A>> {
+public class MList<A> implements Monad<MList> {
 
 	final A head;
 	final MList<A> tail;
@@ -114,8 +114,7 @@ public class MList<A> implements Monad<MList<A>> {
 		return MList.singletonList(m);
 	}
 	@Override
-	public <N> Monad<N> bind(Function<MList<A>, N> f) {
-		// TODO Auto-generated method stub
-		return null;
+	public <A> MList bind(Function<A, MList> f) {
+		return foldr((e, acc) -> f.apply((A) e).append(acc), new MList<>());
 	}
 }

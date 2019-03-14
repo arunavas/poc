@@ -12,7 +12,8 @@ public class MonadPropertyTest {
 		MList<Integer> l1 = MList.singletonList(5).cons(6).cons(7).cons(8).cons(9).reverse();
 		MList<Integer> ll = l.append(l1);
 		System.out.println(l + " ++ " + l1 + " = " + ll);
-		System.out.println(ll.flatmap(x -> MList.singletonList(x - 1)));
+		//MList's flatmap is equal to Monad's bind
+		System.out.println("flatmap == bind => " + ll.flatmap(x -> MList.singletonList(x - 1)).equals(ll.bind(x -> MList.singletonList(((int)x) - 1))));
 		System.out.println(ll.flatmap(x -> MList.singletonList(x - 1)).map(x -> x + 1));
 	}
 	
